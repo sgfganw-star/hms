@@ -170,8 +170,18 @@
 <h2 class="text-2xl font-black text-slate-800 dark:text-white mb-2 tracking-wide font-sans">جامعة العرب</h2>
         <p class="text-sm font-bold text-slate-400 animate-pulse">جاري تأمين الاتصال السحابي بالمنصة...</p>
     </div>
+    <!-- شاشة انقطاع الإنترنت -->
+    <div id="offline-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[99999] hidden flex-col items-center justify-center text-center px-4 transition-opacity duration-500">
+        <div class="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center text-5xl mb-6 shadow-inner animate-pulse">
+            <i class="fa-solid fa-wifi"></i>
+        </div>
+        <h2 class="text-3xl font-black text-white mb-2">عذراً، انقطع الاتصال بالإنترنت!</h2>
+        <p class="text-sm text-slate-400 max-w-md leading-relaxed">أنت الآن في وضع عدم الاتصال (Offline). يرجى التحقق من شبكة الـ Wi-Fi أو بيانات الهاتف. ستختفي هذه الشاشة تلقائياً فور عودة الاتصال.</p>
+        <button onclick="window.location.reload()" class="mt-8 bg-rose-600 hover:bg-rose-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition">تحديث الصفحة</button>
+    </div>
 
     <!-- حاوية التنبيهات المنبثقة -->
+
     <div id="toast-container" class="fixed top-5 left-5 flex flex-col gap-3 pointer-events-none w-85"></div>
 
     <!-- ========================================== -->
@@ -650,16 +660,11 @@
                                         </thead>
                                         <tbody id="owner-users-tbody" class="divide-y divide-slate-100 dark:divide-darkBorder font-medium">
                                             <tr>
+                                                <!-- تم تغيير الرقم إلى 5 ليتناسب مع عدد الأعمدة -->
                                                 <td colspan="5" class="p-10 text-center"><i class="fa-solid fa-spinner fa-spin text-2xl text-brand-500"></i></td>
                                             </tr>
                                         </tbody>
                                     </table>
-                                </div>
-                                <!-- زر جلب المزيد من المستخدمين سحابياً للمالك -->
-                                <div class="mt-4 flex justify-center">
-                                    <button id="load-more-users-btn" onclick="window.loadMoreUsersFromServer()" class="hidden bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold py-2.5 px-6 rounded-xl transition text-xs flex items-center gap-2">
-                                        عرض المزيد من الحسابات <i class="fa-solid fa-angle-down"></i>
-                                    </button>
                                 </div>
                             </div>
 
@@ -781,7 +786,15 @@
                                 <!-- التبويب الأول: البيانات الأساسية -->
                                 <div id="builder-tab-basic" class="builder-tab-content block animate-fade-in pb-24">
                                     <div class="space-y-5">
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <!-- إضافة نوع الكورس -->
+                                            <div>
+                                                <label class="block text-xs font-bold mb-1 text-slate-500">نوع الكورس (نظام الإدارة)</label>
+                                                <select id="c-course-type" class="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-darkBorder rounded-xl outline-none focus:ring-2 focus:ring-brand-500 font-bold text-slate-700 dark:text-slate-300">
+                                                    <option value="standard">👤 دكتور واحد (قياسي)</option>
+                                                    <option value="collaborative">👥 كورس تشاركي (عدة دكاترة)</option>
+                                                </select>
+                                            </div>
                                             <div>
                                                 <label class="block text-xs font-bold mb-1 text-slate-500">مستوى الصعوبة</label>
                                                 <select id="c-difficulty" onchange="updateLivePreview()" class="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-darkBorder rounded-xl outline-none focus:ring-2 focus:ring-brand-500">
@@ -1097,9 +1110,9 @@ Here is the text to analyze:
                     </div>
                     
                     <!-- حاوية زر عرض المزيد -->
-                    <div id="catalog-load-more-container" class="flex justify-center pb-10">
-                        <button onclick="loadMoreCoursesFromServer()" class="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-8 rounded-xl transition shadow-sm flex items-center gap-2 text-sm">
-                            عرض المزيد من الكورسات سحابياً <i class="fa-solid fa-angle-down"></i>
+                    <div id="catalog-load-more-container" class="hidden flex justify-center pb-10">
+                        <button onclick="loadMoreCourses()" class="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-8 rounded-xl transition shadow-sm flex items-center gap-2 text-sm">
+                            عرض المزيد من الكورسات <i class="fa-solid fa-angle-down"></i>
                         </button>
                     </div>
                 </div>
@@ -1743,7 +1756,7 @@ Here is the text to analyze:
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, sendPasswordResetEmail, sendEmailVerification, reload, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, orderBy, onSnapshot, where, limit, startAfter, collectionGroup, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, orderBy, onSnapshot, where, limit, startAfter, collectionGroup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -1769,7 +1782,6 @@ Here is the text to analyze:
         let allPlaylists = [];
         let lastVisibleCourse = null; // مؤشر لتتبع آخر كورس تم جلبه
         let isFetchingMore = false; // لمنع تكرار الطلب في نفس الوقت
-        let lastVisibleUser = null; // مؤشر لتتبع آخر مستخدم تم جلبه للمالك
         let currentActiveLectureId = null;
         let currentActiveResourceId = null;
         let isAppReady = false; 
@@ -2217,15 +2229,10 @@ Here is the text to analyze:
                     console.log("⚡ Loaded courses from local session cache (0 Firestore Reads)");
                 } else {
                     // جلب البيانات من السحاب فقط عند انتهاء الكاش أو فرض التحديث
-                    // جلب أول 15 كورس فقط بدلاً من جلب قاعدة البيانات بالكامل
-                    const coursesQuery = query(collection(db, "courses"), orderBy("createdAt", "desc"), limit(15));
+                    const coursesQuery = query(collection(db, "courses"), orderBy("createdAt", "desc"));
                     const snapshot = await getDocs(coursesQuery);
                     allCourses = [];
                     snapshot.forEach(docSnap => allCourses.push({ id: docSnap.id, ...docSnap.data() }));
-                    // حفظ مؤشر آخر كورس تم جلبه للبدء منه عند ضغط (عرض المزيد)
-                    if (!snapshot.empty) {
-                        lastVisibleCourse = snapshot.docs[snapshot.docs.length - 1];
-                    }
                     
                     // حفظ البيانات في كاش المتصفح
                     sessionStorage.setItem(cacheKey, JSON.stringify(allCourses));
@@ -2850,50 +2857,86 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
             const lecId = lecData ? lecData.id : getGenId();
             const lecTitle = lecData ? lecData.title : '';
+            const lecOwnerId = lecData ? (lecData.ownerId || currentUser.uid) : currentUser.uid;
+            const lecOwnerName = lecData ? (lecData.ownerName || 'دكتور') : (userData.name || currentUser.email.split('@')[0]);
+            
+            // قراءة نوع الكورس الحالي
+            const courseType = document.getElementById('c-course-type').value;
+            // التحقق هل الدكتور الحالي هو مالك هذه المحاضرة أم لا (المالك السوبر يستثنى من القفل)
+            const isMyLecture = (lecOwnerId === currentUser.uid) || (userData.role === 'superadmin') || (courseType !== 'collaborative');
 
             const block = document.createElement('div');
-            // تصميم احترافي لحاوية المحاضرة
-            block.className = "lecture-block bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl mb-5 shadow-sm overflow-hidden transition-all hover:border-brand-300 dark:hover:border-brand-700";
-            block.dataset.lecid = lecId;
+            block.className = `lecture-block bg-white dark:bg-slate-900 border-2 ${isMyLecture ? 'border-slate-100 dark:border-slate-800 hover:border-brand-300' : 'border-slate-200/50 dark:border-slate-800/50 opacity-80'} rounded-2xl mb-5 shadow-sm overflow-hidden transition-all`;
             
-            block.innerHTML = `
-                <!-- الهيدر الخاص بالمحاضرة (لون كهرماني برتقالي صلب ومميز مثل عرض الطالب) -->
-                <div class="bg-amber-500 p-4 flex flex-col md:flex-row gap-4 justify-between items-center cursor-move text-white rounded-t-2xl">
-                    <div class="flex items-center gap-3 w-full">
-                        <div class="cursor-grab text-amber-100 hover:text-white transition"><i class="fa-solid fa-grip-vertical"></i></div>
-                        
-                        <!-- مربع رقم الترتيب الجديد -->
-                        <div class="w-16 shrink-0">
-                            <input type="number" class="lec-order-input w-full p-2 text-center bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-lg outline-none text-sm font-bold focus:ring-2 focus:ring-amber-300" placeholder="الترتيب" value="${lecData && lecData.order ? lecData.order : ''}" min="1" required title="رقم ترتيب المحاضرة (1, 2, 3...)">
+            // حفظ الداتا الأساسية في الـ dataset لاستخراجها عند الحفظ
+            block.dataset.lecid = lecId;
+            block.dataset.ownerid = lecOwnerId;
+            block.dataset.ownername = lecOwnerName;
+            block.dataset.lectitle = lecTitle;
+            block.dataset.lecorder = lecData && lecData.order ? lecData.order : '99';
+            
+            if (isMyLecture) {
+                // شكل المحاضرة الطبيعي القابل للتعديل
+                block.innerHTML = `
+                    <div class="bg-amber-500 p-4 flex flex-col md:flex-row gap-4 justify-between items-center cursor-move text-white rounded-t-2xl">
+                        <div class="flex items-center gap-3 w-full">
+                            <div class="cursor-grab text-amber-100 hover:text-white transition"><i class="fa-solid fa-grip-vertical"></i></div>
+                            <div class="w-16 shrink-0">
+                                <input type="number" class="lec-order-input w-full p-2 text-center bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-lg outline-none text-sm font-bold focus:ring-2 focus:ring-amber-300" placeholder="الترتيب" value="${lecData && lecData.order ? lecData.order : ''}" min="1" required>
+                            </div>
+                            <div class="w-full flex-1">
+                                <input type="text" class="lec-title-input w-full bg-transparent outline-none font-black text-white placeholder-amber-100 text-base" placeholder="اكتب عنوان المحاضرة هنا..." value="${lecTitle}" required onchange="this.closest('.lecture-block').dataset.lectitle = this.value;">
+                            </div>
                         </div>
+                        <button type="button" onclick="if(confirm('هل أنت متأكد من حذف هذه المحاضرة؟')) this.closest('.lecture-block').remove();" class="text-white hover:text-rose-200 bg-amber-600/40 p-2.5 rounded-xl transition shrink-0"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                    </div>
+                    <div class="p-4 bg-white dark:bg-slate-900">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase"><i class="fa-solid fa-photo-film text-brand-500 mr-1"></i> مصادر المحاضرة</p>
+                            ${courseType === 'collaborative' ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded text-[9px] font-bold"><i class="fa-solid fa-unlock"></i> هذا الجزء يخصك ومتاح للتعديل</span>` : ''}
+                        </div>
+                        <div class="resources-container space-y-2"></div>
+                        <button type="button" onclick="addResourceBlock(this.closest('.lecture-block').querySelector('.resources-container'))" class="mt-3 w-full py-2.5 border-2 border-dashed border-slate-200 text-slate-400 text-xs font-bold rounded-xl hover:border-brand-500 hover:text-brand-600 transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> أضف مصدر جديد
+                        </button>
+                    </div>
+                `;
+            } else {
+                // شكل المحاضرة المقفل (للكورسات التشاركية)
+                block.innerHTML = `
+                    <div class="bg-slate-300 dark:bg-slate-800 p-4 flex flex-col md:flex-row gap-4 justify-between items-center text-slate-500 dark:text-slate-400 rounded-t-2xl border-b border-slate-200 dark:border-slate-700">
+                        <div class="flex items-center gap-3 w-full">
+                            <i class="fa-solid fa-lock text-slate-400"></i>
+                            <div class="w-16 shrink-0"><span class="w-full inline-block p-2 text-center bg-slate-200 dark:bg-slate-900 rounded-lg text-sm font-bold opacity-50">${lecData && lecData.order ? lecData.order : '-'}</span></div>
+                            <div class="w-full flex-1"><span class="font-black text-base opacity-70">${lecTitle}</span></div>
+                        </div>
+                        <span class="bg-white/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg text-[10px] font-bold shrink-0 shadow-sm border border-slate-200/50"><i class="fa-solid fa-user-doctor text-brand-500"></i> يخص د. ${lecOwnerName}</span>
+                    </div>
+                    <div class="p-4 bg-slate-50/50 dark:bg-slate-900/50 pointer-events-none opacity-60 grayscale-[50%]">
+                        <p class="text-[10px] font-bold text-slate-400 mb-3"><i class="fa-solid fa-photo-film mr-1"></i> مصادر (مقفلة للتعديل)</p>
+                        <div class="resources-container space-y-2"></div>
+                    </div>
+                `;
+            }
 
-                        <div class="w-full flex-1">
-                            <input type="text" class="lec-title-input w-full bg-transparent outline-none font-black text-white placeholder-amber-100 text-base" placeholder="اكتب عنوان المحاضرة هنا (مثال: الوحدة الأولى: المقدمة)..." value="${lecTitle}" required>
-                        </div>
-                    </div>
-                    <button type="button" onclick="if(confirm('هل أنت متأكد من حذف هذه المحاضرة بكامل مصادرها؟')) this.closest('.lecture-block').remove();" class="text-white hover:text-rose-200 bg-amber-600/40 hover:bg-amber-700/40 p-2.5 rounded-xl transition shrink-0" title="حذف المحاضرة"><i class="fa-solid fa-trash-can text-sm"></i></button>
-                </div>
-                
-                <!-- حاوية المصادر (Resources) -->
-                <div class="p-4 bg-white dark:bg-slate-900">
-                    <p class="text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-wider"><i class="fa-solid fa-photo-film text-brand-500 mr-1"></i> محتويات ومصادر هذه المحاضرة:</p>
-                    <div class="resources-container space-y-2">
-                        <!-- Resources dynamically nested here -->
-                    </div>
-                    
-                    <button type="button" onclick="addResourceBlock(this.closest('.lecture-block').querySelector('.resources-container'))" class="mt-3 w-full py-2.5 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-brand-500 hover:text-brand-600 text-slate-400 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-plus"></i> أضف فيديو، ملف PDF، أو اختبار
-                    </button>
-                </div>
-            `;
             container.appendChild(block);
 
             if(lecData && lecData.resources) {
                 const resContainer = block.querySelector('.resources-container');
-                // ترتيب المصادر عند الفتح في وضع التعديل
                 lecData.resources.sort((a, b) => (a.order || 99) - (b.order || 99));
-                lecData.resources.forEach(res => window.addResourceBlock(resContainer, res));
-            } else {
+                lecData.resources.forEach(res => {
+                    // إذا كان مقفلاً، نضيف المصدر ونعطله
+                    window.addResourceBlock(resContainer, res);
+                    if (!isMyLecture) {
+                        // إخفاء أزرار الحذف من المصادر المقفلة
+                        const lastAddedRes = resContainer.lastElementChild;
+                        if(lastAddedRes) {
+                            const delBtn = lastAddedRes.querySelector('button[title="حذف هذا المصدر"]');
+                            if(delBtn) delBtn.remove();
+                        }
+                    }
+                });
+            } else if (isMyLecture) {
                 window.addResourceBlock(block.querySelector('.resources-container'));
             }
         };
@@ -3167,8 +3210,20 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     <label class="text-[10px] font-bold text-slate-400 mb-1 block">صورة السؤال التوضيحية (رابط اختياري)</label>
                     <input type="text" class="adv-img-input w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط الصورة هنا..." value="${qImg}">
                     <div class="mt-1.5 flex items-center">
-                        <a href="https://phototourl.com/ar" target="_blank" class="inline-flex items-center gap-1 text-[9px] font-black text-brand-650 dark:text-brand-400 hover:underline">
-                            <i class="fa-solid fa-cloud-arrow-up border p-1 rounded-md"></i> اضغط هنا لرفع الصورة سحابياً والحصول على رابط مباشر مخصص للموقع
+                        <a href="https://phototourl.com/ar" target="_blank" class="inline-flex items-center gap-1 text-[9px] font-black text-brand-600 dark:text-brand-400 hover:underline">
+                            <i class="fa-solid fa-cloud-arrow-up border p-1 rounded-md"></i> اضغط هنا لرفع الصورة سحابياً
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ميزة الشرح الصوتي الجديدة -->
+                <div class="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-2">
+                    <label class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-2 block flex items-center gap-1.5"><i class="fa-solid fa-microphone"></i> مقطع صوتي لشرح السؤال (اختياري)</label>
+                    <div class="flex flex-col gap-2">
+                        <input type="text" oninput="this.nextElementSibling.src = this.value; this.nextElementSibling.classList.toggle('hidden', !this.value);" class="adv-audio-input w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط التسجيل الصوتي المباشر هنا (ينتهي بـ mp3)..." value="${qData && qData.audio ? qData.audio : ''}">
+                        <audio controls class="w-full h-8 ${qData && qData.audio ? '' : 'hidden'}" src="${qData && qData.audio ? qData.audio : ''}"></audio>
+                        <a href="https://vocaroo.com/" target="_blank" class="inline-flex items-center gap-1 text-[9px] font-black text-emerald-600 hover:underline w-max">
+                            <i class="fa-solid fa-record-vinyl text-rose-500 animate-pulse"></i> اضغط هنا لتسجيل صوتك واستخراج الرابط المباشر
                         </a>
                     </div>
                 </div>
@@ -3425,6 +3480,7 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
             const courseData = {
                 creatorName: userData.name || currentUser.email.split('@')[0],
+                courseType: document.getElementById('c-course-type').value || 'standard', // حفظ نوع الكورس
                 difficulty: document.getElementById('c-difficulty').value,
                 priceType: document.getElementById('c-price-type').value,
                 priceAmount: document.getElementById('c-price-amount').value.trim(),
@@ -3441,9 +3497,12 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
             const lecBlocks = document.querySelectorAll('.lecture-block');
             lecBlocks.forEach(lecBlock => {
-                const lecTitle = lecBlock.querySelector('.lec-title-input').value.trim();
-                const lecOrder = parseInt(lecBlock.querySelector('.lec-order-input').value) || 99;
+                const lecTitle = lecBlock.querySelector('.lec-title-input') ? lecBlock.querySelector('.lec-title-input').value.trim() : lecBlock.dataset.lectitle; // قراءة العنوان في وضع القراءة فقط
+                const lecOrder = parseInt(lecBlock.querySelector('.lec-order-input') ? lecBlock.querySelector('.lec-order-input').value : lecBlock.dataset.lecorder) || 99;
                 const lecId = lecBlock.dataset.lecid || getGenId();
+                // الاحتفاظ بمالك المحاضرة الأصلي أو تعيين الدكتور الحالي كمالك جديد
+                const ownerId = lecBlock.dataset.ownerid || currentUser.uid;
+                const ownerName = lecBlock.dataset.ownername || (userData.name || currentUser.email.split('@')[0]);
                 const resources = [];
                 
                 lecBlock.querySelectorAll('.resource-block').forEach(resBlock => {
@@ -3503,11 +3562,13 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                             qItems.forEach(item => {
                                 const qText = item.querySelector('.adv-title-input').value.trim() || 'سؤال';
                                 const qImg = item.querySelector('.adv-img-input').value.trim();
+                                const qAudio = item.querySelector('.adv-audio-input').value.trim(); // قراءة الرابط الصوتي
                                 const qExpSum = item.querySelector('.adv-exp-summary-input').value.trim();
                                 const optRows = item.querySelectorAll('.adv-option-row');
                                 
                                 let blockStr = `[Q] ${qText}\n`;
                                 if(qImg) blockStr += `[IMG] ${qImg}\n`;
+                                if(qAudio) blockStr += `[AUDIO] ${qAudio}\n`; // إضافة الصوت للنص
                                 
                                 let correctIdx = 0;
                                 let optionStrings = [];
@@ -3555,9 +3616,15 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                 });
                 
                 if(lecTitle) {
-                    // ترتيب المصادر تصاعدياً قبل حفظها لضمان النظام
                     resources.sort((a, b) => (a.order || 99) - (b.order || 99));
-                    courseData.lectures.push({ id: lecId, title: lecTitle, order: lecOrder, resources: resources });
+                    courseData.lectures.push({ 
+                        id: lecId, 
+                        title: lecTitle, 
+                        order: lecOrder, 
+                        ownerId: ownerId, 
+                        ownerName: ownerName, 
+                        resources: resources 
+                    });
                 }
             });
 
@@ -3761,79 +3828,35 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
         window.initSuperAdmin = async function() {
             try {
-                // 1. جلب الإحصائيات بأقل تكلفة ممكنة باستخدام getCountFromServer
-                const studentsQuery = query(collection(db, "users"), where("role", "==", "student"));
-                const activeAdminsQuery = query(collection(db, "users"), where("role", "==", "admin"), where("status", "==", "active"));
-                const pendingAdminsQuery = query(collection(db, "users"), where("role", "==", "admin"), where("status", "==", "pending"));
-                
-                const [sCountSnap, aCountSnap, pCountSnap, cCountSnap] = await Promise.all([
-                    getCountFromServer(studentsQuery),
-                    getCountFromServer(activeAdminsQuery),
-                    getCountFromServer(pendingAdminsQuery),
-                    getCountFromServer(collection(db, "courses"))
-                ]);
-
-                document.getElementById('stat-students').innerText = sCountSnap.data().count; 
-                document.getElementById('stat-admins').innerText = aCountSnap.data().count;
-                document.getElementById('stat-courses').innerText = cCountSnap.data().count; 
-                document.getElementById('stat-pending').innerText = pCountSnap.data().count;
-
-                // 2. جلب أول 20 مستخدم فقط للجدول لتقليل القراءات
-                const usersQuery = query(collection(db, "users"), limit(20));
-                const snap = await getDocs(usersQuery);
-                
+                const snap = await getDocs(collection(db, "users"));
+                let sCount = 0, aCount = 0, pCount = 0;
                 superAdminUsersList = [];
+
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
+                    const userId = docSnap.id;
+                    
+                    // نقوم باستبعاد المالك نفسه من جدول التحكم لكي لا يعبث بصلاحياته بالخطأ
                     if (data.role !== 'superadmin') {
-                        superAdminUsersList.push({ id: docSnap.id, ...data });
+                        superAdminUsersList.push({ id: userId, ...data });
                     }
+                    
+                    if(data.role === 'student') sCount++;
+                    if(data.role === 'admin' && data.status === 'active') aCount++;
+                    if(data.role === 'admin' && data.status === 'pending') pCount++;
                 });
-                
-                if (!snap.empty) {
-                    lastVisibleUser = snap.docs[snap.docs.length - 1];
-                }
 
-                // عرض الجدول وإظهار زر عرض المزيد
+                document.getElementById('stat-students').innerText = sCount; 
+                document.getElementById('stat-admins').innerText = aCount;
+                document.getElementById('stat-courses').innerText = allCourses.length; 
+                document.getElementById('stat-pending').innerText = pCount;
+
+                // رندر الجدول فوراً
                 window.filterUsersTable();
-                document.getElementById('load-more-users-btn').classList.remove('hidden');
 
             } catch(e) { 
                 console.error(e); 
                 showToast("خطأ في الاتصال السحابي لجلب سجل المستخدمين.", "error");
-            }
-        };
-
-        // دالة جلب الدفعة التالية من المستخدمين (Pagination للمالك)
-        window.loadMoreUsersFromServer = async function() {
-            if (!lastVisibleUser) return showToast("تم عرض جميع الحسابات.", "info");
-            
-            const btn = document.getElementById('load-more-users-btn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الجلب...';
-
-            try {
-                const nextQuery = query(collection(db, "users"), startAfter(lastVisibleUser), limit(20));
-                const snap = await getDocs(nextQuery);
-                
-                if (!snap.empty) {
-                    lastVisibleUser = snap.docs[snap.docs.length - 1];
-                    snap.forEach(docSnap => {
-                        const data = docSnap.data();
-                        if (data.role !== 'superadmin') {
-                            superAdminUsersList.push({ id: docSnap.id, ...data });
-                        }
-                    });
-                    window.filterUsersTable(); // تحديث الجدول بالبيانات الجديدة
-                } else {
-                    lastVisibleUser = null;
-                    btn.classList.add('hidden');
-                    showToast("تم جلب جميع الحسابات المتاحة.", "info");
-                }
-            } catch(e) {
-                console.error(e);
-            } finally {
-                btn.innerHTML = originalText;
             }
         };
 
@@ -4131,6 +4154,7 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             
             document.getElementById('course-edit-id').value = course.id;
             document.getElementById('c-title').value = course.title;
+            document.getElementById('c-course-type').value = course.courseType || 'standard'; // استدعاء نوع الكورس عند التعديل
             document.getElementById('c-difficulty').value = course.difficulty || 'مبتدئ';
             document.getElementById('c-duration').value = course.duration || '0';
             document.getElementById('c-cover').value = course.cover || '';
@@ -6558,6 +6582,18 @@ const actionBtnHtml = (isPaid && !isUnlocked)
         // 6. تحديث لوحة التحكم في البداية عند تشغيل المنصة
         // ==========================================
         window.addEventListener('load', () => {
+            // مستشعر حالة الإنترنت
+            const offlineOverlay = document.getElementById('offline-overlay');
+            window.addEventListener('offline', () => {
+                offlineOverlay.classList.remove('hidden');
+                offlineOverlay.classList.add('flex');
+            });
+            window.addEventListener('online', () => {
+                offlineOverlay.classList.add('hidden');
+                offlineOverlay.classList.remove('flex');
+                showToast("عادت شبكة الإنترنت! يمكنك إكمال المذاكرة.", "success");
+            });
+
             // المزامنة التلقائية لشهادات الإتمام والصورة الشخصية الرمزية
             setTimeout(() => {
                 if (userData) {
