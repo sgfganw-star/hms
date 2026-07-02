@@ -3663,7 +3663,8 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                             order: rOrder, // حفظ الترتيب في السيرفر
                             type: rType,
                             title: rTitle, 
-                            url: (rType === 'quiz' || rType === 'flashcard' || rType === 'advanced_quiz') ? "" : formatEmbedUrl(rUrl, rType),
+                            // تعديل ذكي: السماح بحفظ رابط الصوت العام الشامل للاختبار المتقدم
+                            url: (rType === 'quiz' || rType === 'flashcard') ? "" : (rType === 'advanced_quiz' ? rUrl : formatEmbedUrl(rUrl, rType)),
                             downloadUrl: rDownloadUrl,
                             quizData: rType === 'quiz' ? rQuizData : "",
                             flashcardData: rType === 'flashcard' ? rFlashcardData : "",
