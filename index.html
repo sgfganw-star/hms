@@ -3839,16 +3839,35 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             }
         };
 
-        // دالة لتوليد كود المشغل الصوتي المناسب بناءً على نوع الرابط (محدثة بارتفاع كافٍ لمشغل درايف السحابي)
+        // [اختراع خاص بالمنصة]: توليد كارت مشغل صوتي تفاعلي بالكامل بتصميم واتساب/تيليجرام الفاخر
         window.getAudioPlayerHTML = function(url, isDark = true) {
             if (!url) return '';
-            if (url.includes('drive.google.com')) {
-                // استخدام مشغل غوغل درايف الرسمي السحابي بارتفاع مثالي (h-36) ليظهر المشغل والخط الزمني بوضوح
-                return `<iframe src="${url}" class="w-full h-36 rounded-2xl border-0 bg-black shrink-0" allow="autoplay"></iframe>`;
-            } else {
-                // مشغل المتصفح الافتراضي القياسي للملفات المباشرة العادية
-                return `<audio src="${url}" controls class="w-full h-10 outline-none shrink-0" style="filter: sepia(10%) saturate(80%);"></audio>`;
-            }
+            const uniqueId = 'voice_' + Math.random().toString(36).substr(2, 9);
+            
+            return `
+                <div class="custom-audio-player w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center gap-3 select-none text-right animate-scale-up" id="player-${uniqueId}" dir="rtl">
+                    <!-- مشغل الصوت الأصلي المخفي بالخلفية -->
+                    <audio id="native-audio-${uniqueId}" class="hidden" preload="none"></audio>
+                    
+                    <!-- زر تشغيل وإيقاف دائري متحرك وبارز -->
+                    <button type="button" onclick="window.toggleCustomAudio('${uniqueId}', '${url}')" id="play-btn-${uniqueId}" class="w-10 h-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center text-base shadow-md hover:scale-105 active:scale-95 transitionshrink-0">
+                        <i class="fa-solid fa-play pr-0.5" id="play-icon-${uniqueId}"></i>
+                    </button>
+                    
+                    <!-- شريط التحكم والمؤشرات الزمنية -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center mb-1.5 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-en">
+                            <span id="time-current-${uniqueId}">0:00</span>
+                            <span id="player-status-${uniqueId}" class="text-[10px] font-sans text-emerald-600 dark:text-emerald-500 font-black flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> اضغط للاستماع للشرح</span>
+                            <span id="time-total-${uniqueId}">--:--</span>
+                        </div>
+                        <!-- شريط التقدم التفاعلي القابل للضغط والتقديم -->
+                        <div class="relative w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full cursor-pointer overflow-hidden" onclick="window.seekCustomAudio(event, '${uniqueId}')" id="progress-bar-bg-${uniqueId}">
+                            <div id="progress-bar-fill-${uniqueId}" class="absolute top-0 right-0 bg-emerald-500 h-full w-0 transition-all duration-100"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
         };
 
         // دالة التحويل الذكي التلقائي لروابط صوتيات Google Drive إلى مشغل غوغل الرسمي
@@ -3896,6 +3915,113 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             if (previewBox) {
                 previewBox.innerHTML = window.getAudioPlayerHTML(inputElem.value.trim(), false);
             }
+        };
+
+        // [محرك الصوت السحابي المبتكر للمنصة]: يمنع حظر الكوكيز، يوفر البيانات، ويتحكم بالمشغلات
+        window.customAudioInstances = {}; 
+
+        window.toggleCustomAudio = async function(id, url) {
+            const nativeAudio = document.getElementById(`native-audio-${id}`);
+            const playIcon = document.getElementById(`play-icon-${id}`);
+            const statusLabel = document.getElementById(`player-status-${id}`);
+            const timeCurrent = document.getElementById(`time-current-${id}`);
+            const timeTotal = document.getElementById(`time-total-${id}`);
+            const progressFill = document.getElementById(`progress-bar-fill-${id}`);
+
+            if (!nativeAudio) return;
+
+            // 1. التحميل الذكي عند الطلب (عند أول ضغطة فقط لتوفير باقة الطالب)
+            if (!nativeAudio.src) {
+                try {
+                    statusLabel.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل الشرح...`;
+                    playIcon.className = "fa-solid fa-spinner fa-spin";
+                    
+                    let fetchUrl = url;
+                    // فك تشفير غوغل درايف وتحويله لرابط تحميل داتا مباشر ومتوافق مع CORS
+                    if (url.includes('drive.google.com')) {
+                        const fileId = url.split('/d/')[1].split('/')[0];
+                        fetchUrl = `https://drive.usercontent.google.com/u/0/uc?id=${fileId}&export=download`;
+                    }
+
+                    // جلب الداتا سحابياً وتحويلها لـ Local Blob لتخطي أي حظر من المتصفحات للكوكيز
+                    const response = await fetch(fetchUrl);
+                    if (!response.ok) throw new Error("CORS Network Blocked");
+                    const blob = await response.blob();
+                    const localBlobUrl = URL.createObjectURL(blob);
+                    
+                    nativeAudio.src = localBlobUrl;
+                    nativeAudio.load();
+                } catch(e) {
+                    console.warn("تم التحول للمشغل الاحتياطي لضمان الأمان:", e);
+                    // الخيار البديل التلقائي إذا كانت الخصوصية تمنع الـ Fetch في بعض الأجهزة القديمة
+                    const playerCard = document.getElementById(`player-${id}`);
+                    if (playerCard) {
+                        playerCard.innerHTML = `<iframe src="${url}" class="w-full h-36 rounded-2xl border-0 bg-black"></iframe>`;
+                    }
+                    return;
+                }
+            }
+
+            // 2. التحكم بالتشغيل والإيقاف لمنع تداخل الصوتيات
+            if (nativeAudio.paused) {
+                // إيقاف أي مقاطع صوتية أخرى تعمل بالخلفية فوراً لتركيز الطالب
+                Object.values(window.customAudioInstances).forEach(audio => {
+                    if (audio !== nativeAudio) {
+                        audio.pause();
+                        // إعادة ضبط بقية الأيقونات لتظهر علامة تشغيل
+                        const otherPlayIcon = document.querySelector(`.custom-audio-player audio[src="${audio.src}"]`)?.parentNode?.querySelector('i[id^="play-icon-"]');
+                        if (otherPlayIcon) otherPlayIcon.className = "fa-solid fa-play pr-0.5";
+                    }
+                });
+                
+                nativeAudio.play();
+                playIcon.className = "fa-solid fa-pause";
+                statusLabel.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> جاري الاستماع الآن...`;
+                window.customAudioInstances[id] = nativeAudio;
+            } else {
+                nativeAudio.pause();
+                playIcon.className = "fa-solid fa-play pr-0.5";
+                statusLabel.textContent = "موقوف مؤقتاً";
+            }
+
+            // 3. تحديث العداد الزمني وشريط البار الأخضر لحظياً
+            nativeAudio.ontimeupdate = () => {
+                const pct = (nativeAudio.currentTime / nativeAudio.duration) * 100;
+                progressFill.style.width = `${pct}%`;
+                timeCurrent.textContent = formatSecs(nativeAudio.currentTime);
+                if (nativeAudio.duration) {
+                    timeTotal.textContent = formatSecs(nativeAudio.duration);
+                }
+            };
+
+            nativeAudio.onended = () => {
+                playIcon.className = "fa-solid fa-play pr-0.5";
+                statusLabel.textContent = "تم الاستماع بالكامل";
+                progressFill.style.width = "0%";
+                timeCurrent.textContent = "0:00";
+            };
+
+            function formatSecs(secs) {
+                if (isNaN(secs)) return "0:00";
+                const m = Math.floor(secs / 60);
+                const s = Math.floor(secs % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            }
+        };
+
+        // 4. ميزة سحب وتقديم وتأخير المؤشر الصوتي باللمس أو الماوس على البار
+        window.seekCustomAudio = function(event, id) {
+            const nativeAudio = document.getElementById(`native-audio-${id}`);
+            const bar = document.getElementById(`progress-bar-bg-${id}`);
+            if (!nativeAudio || !nativeAudio.duration) return;
+
+            const rect = bar.getBoundingClientRect();
+            // دعم اتجاه الـ RTL العربي (سحب من اليمين لليسار)
+            const clickX = rect.right - event.clientX; 
+            const width = rect.width;
+            const pct = Math.max(0, Math.min(clickX / width, 1));
+
+            nativeAudio.currentTime = pct * nativeAudio.duration;
         };
 
         // ==========================================
