@@ -3084,7 +3084,27 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
                     <!-- الطريقة الأولى: واجهة الأزرار التفاعلية (يدوي) -->
                     <div class="adv-quiz-ui-mode-container">
-                        <button type="button" onclick="window.addAdvQuizQuestionUI(this)" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] mb-3 transition shadow-sm"><i class="fa-solid fa-plus"></i> إضافة سؤال متقدم جديد</button>
+                        <!-- هيدر التحكم المدمج الجديد لزر الإضافة والصوت العام على نفس الصف -->
+                        <div class="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-slate-250 dark:border-slate-800 pb-3.5">
+                            <!-- اليمين: زر إضافة السؤال المتقدم -->
+                            <button type="button" onclick="window.addAdvQuizQuestionUI(this)" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs font-black transition shadow-sm shrink-0 flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus"></i> إضافة سؤال متقدم جديد
+                            </button>
+                            
+                            <!-- اليسار: حقل الصوت الشامل للاختبار بأزراره المدمجة -->
+                            <div class="flex-1 flex gap-2 items-center w-full md:w-auto justify-end audio-container-wrapper">
+                                <input type="text" oninput="window.autoConvertDriveAudioLink(this);" class="adv-quiz-overall-audio-input w-full md:w-64 p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="رابط الشرح الصوتي الشامل للاختبار (اختياري)..." value="${resData && resData.type === 'advanced_quiz' && resData.url ? resData.url : ''}">
+                                
+                                <a href="https://online-voice-recorder.com/ar/" target="_blank" class="bg-rose-500 hover:bg-rose-600 text-white p-2.5 rounded-xl text-[10px] font-black transition shrink-0 flex items-center justify-center gap-1 shadow-sm w-9 h-9" title="سجل صوتك أولاً">
+                                    <i class="fa-solid fa-microphone"></i>
+                                </a>
+                                
+                                <a href="https://drive.google.com/" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl text-[10px] font-black transition shrink-0 flex items-center justify-center gap-1 shadow-sm w-9 h-9" title="افتح غوغل درايف لرفع الملف">
+                                    <i class="fa-brands fa-google-drive"></i>
+                                </a>
+                            </div>
+                        </div>
+
                         <div class="adv-quiz-ui-container space-y-4 max-h-96 overflow-y-auto custom-scrollbar p-3 bg-slate-100/40 dark:bg-slate-900/50 rounded-2xl border border-slate-200/50 dark:border-slate-800">
                             <!-- سيتم حقن الأسئلة اليدوية هنا -->
                         </div>
@@ -3538,7 +3558,16 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     let rOrder = parseInt(resBlock.querySelector('.res-order-input').value) || 99; // قراءة الترتيب
                     let rType = resBlock.querySelector('.res-type').value;
                     let rTitle = resBlock.querySelector('.res-title').value.trim();
+                    
+                    // تعديل ذكي: قراءة الرابط الصوتي العام للاختبار المتقدم من الخانة العلوية الجديدة
                     let rUrl = resBlock.querySelector('.res-url').value.trim();
+                    if (rType === 'advanced_quiz') {
+                        const overallAudioInp = resBlock.querySelector('.adv-quiz-overall-audio-input');
+                        if (overallAudioInp) {
+                            rUrl = overallAudioInp.value.trim();
+                        }
+                    }
+                    
                     let rDownloadUrl = resBlock.querySelector('.res-download-url').value.trim();
                     let rQuizData = "";
                     if(rType === 'quiz') {
