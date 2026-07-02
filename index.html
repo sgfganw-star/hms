@@ -3085,22 +3085,22 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     <!-- الطريقة الأولى: واجهة الأزرار التفاعلية (يدوي) -->
                     <div class="adv-quiz-ui-mode-container">
                         <!-- هيدر التحكم المدمج الجديد لزر الإضافة والصوت العام على نفس الصف -->
-                        <div class="flex flex-col md:flex-row gap-3 items-center justify-between mb-4 border-b border-slate-250 dark:border-slate-800 pb-3.5">
+                        <div class="flex flex-col sm:flex-row gap-3 items-center justify-between w-full mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">
                             <!-- اليمين: زر إضافة السؤال المتقدم -->
                             <button type="button" onclick="window.addAdvQuizQuestionUI(this)" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs font-black transition shadow-sm shrink-0 flex items-center gap-1.5">
                                 <i class="fa-solid fa-plus"></i> إضافة سؤال متقدم جديد
                             </button>
                             
                             <!-- اليسار: حقل الصوت الشامل للاختبار بأزراره المدمجة -->
-                            <div class="flex-1 flex gap-2 items-center w-full md:w-auto justify-end audio-container-wrapper">
-                                <input type="text" oninput="window.autoConvertDriveAudioLink(this);" class="adv-quiz-overall-audio-input w-full md:w-64 p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="رابط الشرح الصوتي الشامل للاختبار (اختياري)..." value="${resData && resData.type === 'advanced_quiz' && resData.url ? resData.url : ''}">
+                            <div class="flex gap-2 items-center audio-container-wrapper w-full sm:w-auto justify-end">
+                                <input type="text" oninput="window.autoConvertDriveAudioLink(this);" class="adv-quiz-overall-audio-input w-full sm:w-64 p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="رابط الشرح الصوتي الشامل للاختبار (اختياري)..." value="${resData && resData.type === 'advanced_quiz' && resData.url ? resData.url : ''}">
                                 
-                                <a href="https://online-voice-recorder.com/ar/" target="_blank" class="bg-rose-500 hover:bg-rose-600 text-white p-2.5 rounded-xl text-[10px] font-black transition shrink-0 flex items-center justify-center gap-1 shadow-sm w-9 h-9" title="سجل صوتك أولاً">
-                                    <i class="fa-solid fa-microphone"></i>
+                                <a href="https://online-voice-recorder.com/ar/" target="_blank" class="bg-rose-500 hover:bg-rose-600 text-white p-2.5 rounded-xl text-[9px] font-black transition shrink-0 flex items-center justify-center gap-1 shadow-sm w-9 h-9" title="سجل صوتك أولاً">
+                                    <i class="fa-solid fa-microphone text-[11px]"></i>
                                 </a>
                                 
-                                <a href="https://drive.google.com/" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl text-[10px] font-black transition shrink-0 flex items-center justify-center gap-1 shadow-sm w-9 h-9" title="افتح غوغل درايف لرفع الملف">
-                                    <i class="fa-brands fa-google-drive"></i>
+                                <a href="https://drive.google.com/" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl text-[9px] font-black transition shrink-0 flex items-center justify-center gap-1 shadow-sm w-9 h-9" title="افتح غوغل درايف لرفع الملف">
+                                    <i class="fa-brands fa-google-drive text-[11px]"></i>
                                 </a>
                             </div>
                         </div>
