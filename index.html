@@ -650,11 +650,16 @@
                                         </thead>
                                         <tbody id="owner-users-tbody" class="divide-y divide-slate-100 dark:divide-darkBorder font-medium">
                                             <tr>
-                                                <!-- تم تغيير الرقم إلى 5 ليتناسب مع عدد الأعمدة -->
                                                 <td colspan="5" class="p-10 text-center"><i class="fa-solid fa-spinner fa-spin text-2xl text-brand-500"></i></td>
                                             </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                                <!-- زر جلب المزيد من المستخدمين سحابياً للمالك -->
+                                <div class="mt-4 flex justify-center">
+                                    <button id="load-more-users-btn" onclick="window.loadMoreUsersFromServer()" class="hidden bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold py-2.5 px-6 rounded-xl transition text-xs flex items-center gap-2">
+                                        عرض المزيد من الحسابات <i class="fa-solid fa-angle-down"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -1092,9 +1097,9 @@ Here is the text to analyze:
                     </div>
                     
                     <!-- حاوية زر عرض المزيد -->
-                    <div id="catalog-load-more-container" class="hidden flex justify-center pb-10">
-                        <button onclick="loadMoreCourses()" class="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-8 rounded-xl transition shadow-sm flex items-center gap-2 text-sm">
-                            عرض المزيد من الكورسات <i class="fa-solid fa-angle-down"></i>
+                    <div id="catalog-load-more-container" class="flex justify-center pb-10">
+                        <button onclick="loadMoreCoursesFromServer()" class="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 px-8 rounded-xl transition shadow-sm flex items-center gap-2 text-sm">
+                            عرض المزيد من الكورسات سحابياً <i class="fa-solid fa-angle-down"></i>
                         </button>
                     </div>
                 </div>
@@ -1738,7 +1743,7 @@ Here is the text to analyze:
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword, sendPasswordResetEmail, sendEmailVerification, reload, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, orderBy, onSnapshot, where, limit, startAfter, collectionGroup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, orderBy, onSnapshot, where, limit, startAfter, collectionGroup, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -1764,6 +1769,7 @@ Here is the text to analyze:
         let allPlaylists = [];
         let lastVisibleCourse = null; // مؤشر لتتبع آخر كورس تم جلبه
         let isFetchingMore = false; // لمنع تكرار الطلب في نفس الوقت
+        let lastVisibleUser = null; // مؤشر لتتبع آخر مستخدم تم جلبه للمالك
         let currentActiveLectureId = null;
         let currentActiveResourceId = null;
         let isAppReady = false; 
@@ -2211,10 +2217,15 @@ Here is the text to analyze:
                     console.log("⚡ Loaded courses from local session cache (0 Firestore Reads)");
                 } else {
                     // جلب البيانات من السحاب فقط عند انتهاء الكاش أو فرض التحديث
-                    const coursesQuery = query(collection(db, "courses"), orderBy("createdAt", "desc"));
+                    // جلب أول 15 كورس فقط بدلاً من جلب قاعدة البيانات بالكامل
+                    const coursesQuery = query(collection(db, "courses"), orderBy("createdAt", "desc"), limit(15));
                     const snapshot = await getDocs(coursesQuery);
                     allCourses = [];
                     snapshot.forEach(docSnap => allCourses.push({ id: docSnap.id, ...docSnap.data() }));
+                    // حفظ مؤشر آخر كورس تم جلبه للبدء منه عند ضغط (عرض المزيد)
+                    if (!snapshot.empty) {
+                        lastVisibleCourse = snapshot.docs[snapshot.docs.length - 1];
+                    }
                     
                     // حفظ البيانات في كاش المتصفح
                     sessionStorage.setItem(cacheKey, JSON.stringify(allCourses));
@@ -3750,35 +3761,79 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
         window.initSuperAdmin = async function() {
             try {
-                const snap = await getDocs(collection(db, "users"));
-                let sCount = 0, aCount = 0, pCount = 0;
-                superAdminUsersList = [];
+                // 1. جلب الإحصائيات بأقل تكلفة ممكنة باستخدام getCountFromServer
+                const studentsQuery = query(collection(db, "users"), where("role", "==", "student"));
+                const activeAdminsQuery = query(collection(db, "users"), where("role", "==", "admin"), where("status", "==", "active"));
+                const pendingAdminsQuery = query(collection(db, "users"), where("role", "==", "admin"), where("status", "==", "pending"));
+                
+                const [sCountSnap, aCountSnap, pCountSnap, cCountSnap] = await Promise.all([
+                    getCountFromServer(studentsQuery),
+                    getCountFromServer(activeAdminsQuery),
+                    getCountFromServer(pendingAdminsQuery),
+                    getCountFromServer(collection(db, "courses"))
+                ]);
 
+                document.getElementById('stat-students').innerText = sCountSnap.data().count; 
+                document.getElementById('stat-admins').innerText = aCountSnap.data().count;
+                document.getElementById('stat-courses').innerText = cCountSnap.data().count; 
+                document.getElementById('stat-pending').innerText = pCountSnap.data().count;
+
+                // 2. جلب أول 20 مستخدم فقط للجدول لتقليل القراءات
+                const usersQuery = query(collection(db, "users"), limit(20));
+                const snap = await getDocs(usersQuery);
+                
+                superAdminUsersList = [];
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
-                    const userId = docSnap.id;
-                    
-                    // نقوم باستبعاد المالك نفسه من جدول التحكم لكي لا يعبث بصلاحياته بالخطأ
                     if (data.role !== 'superadmin') {
-                        superAdminUsersList.push({ id: userId, ...data });
+                        superAdminUsersList.push({ id: docSnap.id, ...data });
                     }
-                    
-                    if(data.role === 'student') sCount++;
-                    if(data.role === 'admin' && data.status === 'active') aCount++;
-                    if(data.role === 'admin' && data.status === 'pending') pCount++;
                 });
+                
+                if (!snap.empty) {
+                    lastVisibleUser = snap.docs[snap.docs.length - 1];
+                }
 
-                document.getElementById('stat-students').innerText = sCount; 
-                document.getElementById('stat-admins').innerText = aCount;
-                document.getElementById('stat-courses').innerText = allCourses.length; 
-                document.getElementById('stat-pending').innerText = pCount;
-
-                // رندر الجدول فوراً
+                // عرض الجدول وإظهار زر عرض المزيد
                 window.filterUsersTable();
+                document.getElementById('load-more-users-btn').classList.remove('hidden');
 
             } catch(e) { 
                 console.error(e); 
                 showToast("خطأ في الاتصال السحابي لجلب سجل المستخدمين.", "error");
+            }
+        };
+
+        // دالة جلب الدفعة التالية من المستخدمين (Pagination للمالك)
+        window.loadMoreUsersFromServer = async function() {
+            if (!lastVisibleUser) return showToast("تم عرض جميع الحسابات.", "info");
+            
+            const btn = document.getElementById('load-more-users-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الجلب...';
+
+            try {
+                const nextQuery = query(collection(db, "users"), startAfter(lastVisibleUser), limit(20));
+                const snap = await getDocs(nextQuery);
+                
+                if (!snap.empty) {
+                    lastVisibleUser = snap.docs[snap.docs.length - 1];
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (data.role !== 'superadmin') {
+                            superAdminUsersList.push({ id: docSnap.id, ...data });
+                        }
+                    });
+                    window.filterUsersTable(); // تحديث الجدول بالبيانات الجديدة
+                } else {
+                    lastVisibleUser = null;
+                    btn.classList.add('hidden');
+                    showToast("تم جلب جميع الحسابات المتاحة.", "info");
+                }
+            } catch(e) {
+                console.error(e);
+            } finally {
+                btn.innerHTML = originalText;
             }
         };
 
