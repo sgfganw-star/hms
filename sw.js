@@ -1,5 +1,5 @@
 // تم تغيير الإصدار إلى v2 لإجبار المتصفح على تحديث الملفات
-const CACHE_NAME = 'alarab-uni-v3';
+const CACHE_NAME = 'alarab-uni-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
