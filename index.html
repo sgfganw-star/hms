@@ -3224,15 +3224,25 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     </div>
                 </div>
 
-                <!-- ميزة الشرح الصوتي الجديدة -->
-                <div class="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-2">
-                    <label class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-2 block flex items-center gap-1.5"><i class="fa-solid fa-microphone"></i> مقطع صوتي لشرح السؤال (اختياري)</label>
+                <!-- ميزة الشرح الصوتي المدمجة مع زر التسجيل الجانبي -->
+                <div class="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-2 audio-container-wrapper">
+                    <label class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-2 block flex items-center gap-1.5"><i class="fa-solid fa-volume-high animate-pulse"></i> مقطع صوتي لشرح السؤال (سجل وارفع مباشرة)</label>
                     <div class="flex flex-col gap-2">
-                        <input type="text" oninput="window.autoConvertVocarooLink(this); this.nextElementSibling.src = this.value; this.nextElementSibling.classList.toggle('hidden', !this.value);" class="adv-audio-input w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط Vocaroo هنا (مثال: https://voca.ro/1a2b3c) وسنقوم بتحويله لمباشر تلقائياً..." value="${qData && qData.audio ? qData.audio : ''}">
+                        <!-- صف الإدخال وأزرار التحكم الجانبية السريعة -->
+                        <div class="flex gap-1.5 w-full items-center">
+                            <input type="text" oninput="window.autoConvertCatboxLink(this); const player = this.closest('.audio-container-wrapper').querySelector('audio'); player.src = this.value; player.classList.toggle('hidden', !this.value);" class="adv-audio-input flex-1 p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط ملف الصوت المباشر من Catbox هنا..." value="${qData && qData.audio ? qData.audio : ''}">
+                            
+                            <!-- زر التسجيل الجانبي الفوري -->
+                            <a href="https://online-voice-recorder.com/ar/" target="_blank" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2.5 rounded-lg text-[9px] font-black transition shrink-0 flex items-center gap-1 shadow-sm" title="اضغط لتسجيل شرحك الصوتي فوراً وحفظه">
+                                <i class="fa-solid fa-microphone"></i> سجل صوتك
+                            </a>
+
+                            <!-- زر الرفع الجانبي للـ Catbox -->
+                            <a href="https://catbox.moe/" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-lg text-[9px] font-black transition shrink-0 flex items-center gap-1 shadow-sm" title="اضغط لرفع الملف الصوتي واستخراج رابط مباشر">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> ارفع الصوت
+                            </a>
+                        </div>
                         <audio controls class="w-full h-8 ${qData && qData.audio ? '' : 'hidden'}" src="${qData && qData.audio ? qData.audio : ''}"></audio>
-                        <a href="https://vocaroo.com/" target="_blank" class="inline-flex items-center gap-1 text-[9px] font-black text-emerald-600 hover:underline w-max">
-                            <i class="fa-solid fa-record-vinyl text-rose-500 animate-pulse"></i> اضغط هنا لتسجيل صوتك واستخراج الرابط المباشر
-                        </a>
                     </div>
                 </div>
                 
@@ -3829,35 +3839,30 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             }
         };
 
-        // دالة التحويل الذكي التلقائي لروابط Vocaroo إلى مشغل مباشر
-        window.autoConvertVocarooLink = function(inputElem) {
+        // دالة التحقق والتأمين التلقائي لروابط ملفات الصوت المرفوعة عبر Catbox
+        window.autoConvertCatboxLink = function(inputElem) {
             let url = inputElem.value.trim();
-            
-            // التحقق مما إذا كان الرابط هو رابط فوكارو القصير أو العادي (ولا يحتوي على media مسبقاً)
-            if (url.includes("voca.ro/") || (url.includes("vocaroo.com/") && !url.includes("media"))) {
-                try {
-                    // استخراج كود الصوت (الذي يأتي بعد السلاش الأخيرة)
-                    const parts = url.split('/');
-                    const audioId = parts[parts.length - 1];
-                    
-                    if (audioId) {
-                        // تكوين الرابط المباشر للمشغل بصيغة mp3
-                        const directAudioLink = `https://media1.vocaroo.com/mp3/${audioId}`;
-                        
-                        // استبدال القيمة في الحقل فوراً
-                        inputElem.value = directAudioLink;
-                        
-                        // تأثير وميض أخضر لتأكيد التحويل للدكتور
-                        inputElem.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
-                        setTimeout(() => {
-                            inputElem.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
-                        }, 1500);
+            if (!url) return;
 
-                        showToast("تم تحويل رابط Vocaroo إلى مقطع صوتي مباشر بنجاح!", "success");
-                    }
-                } catch(e) {
-                    console.error("خطأ في تحويل رابط فوكارو:", e);
-                }
+            // إذا كتب الدكتور رابط الرفع فقط بدون اسم ملف، ننبهه بلطف
+            if (url === "https://catbox.moe" || url === "https://catbox.moe/") {
+                showToast("تنبيه: يجب رفع الملف أولاً على الموقع ونسخ رابط الملف النهائي المباشر (الذي يبدأ بـ files.catbox.moe).", "error");
+                return;
+            }
+
+            // تعديل تلقائي ذكي: لو الدكتور نسخ الرابط وبدأ بـ files.catbox.moe مباشرة بدون بروتوكول
+            if (url.startsWith("files.catbox.moe")) {
+                url = "https://" + url;
+                inputElem.value = url;
+            }
+
+            // تحقق من احتواء الرابط على النطاق الصحيح للملفات المباشرة لـ Catbox
+            if (url.includes("files.catbox.moe")) {
+                // تأثير بصري خفيف (وميض أخضر) لتأكيد قبول الملف الصوتي المباشر بنجاح
+                inputElem.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+                setTimeout(() => {
+                    inputElem.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+                }, 1500);
             }
         };
 
