@@ -2989,7 +2989,7 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     <div class="flex flex-col md:flex-row gap-2.5 w-full md:pl-12">
                         <div class="flex-1 relative">
                             <i class="fa-solid fa-play absolute right-3 top-3 text-slate-400 text-[10px]"></i>
-                            <input type="text" class="res-url w-full pl-3 pr-8 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-darkBorder rounded-lg outline-none text-xs focus:border-brand-500 transition" placeholder="رابط العرض المباشر (يوتيوب أو درايف)..." value="${resData ? resData.url : ''}">
+                            <input type="text" oninput="if(this.closest('.resource-block').querySelector('.res-type').value === 'advanced_quiz') { window.autoConvertDriveAudioLink(this); }" class="res-url w-full pl-3 pr-8 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-darkBorder rounded-lg outline-none text-xs focus:border-brand-500 transition" placeholder="رابط العرض المباشر (يوتيوب أو درايف)..." value="${resData ? resData.url : ''}">
                         </div>
                         <div class="flex-1 relative flex flex-col">
                             <div class="relative">
@@ -3112,10 +3112,20 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             const quizWrapper = block.querySelector('.quiz-questions-wrapper');
             const flashcardWrapper = block.querySelector('.flashcard-wrapper');
             const advQuizWrapper = block.querySelector('.adv-quiz-wrapper');
+            const resUrlInput = block.querySelector('.res-url');
             
             if (quizWrapper) quizWrapper.classList.add('hidden');
             if (flashcardWrapper) flashcardWrapper.classList.add('hidden');
             if (advQuizWrapper) advQuizWrapper.classList.add('hidden');
+
+            // تغيير نص الإرشاد للدكتور تلقائياً عند اختيار اختبار متقدم
+            if (resUrlInput) {
+                if (selectElem.value === 'advanced_quiz') {
+                    resUrlInput.placeholder = "رابط التسجيل الصوتي التوضيحي الشامل للاختبار بالكامل (اختياري - Google Drive)...";
+                } else {
+                    resUrlInput.placeholder = "رابط العرض المباشر (يوتيوب أو درايف)...";
+                }
+            }
             
             if (selectElem.value === 'quiz' && quizWrapper) {
                 quizWrapper.classList.remove('hidden');
@@ -6429,6 +6439,22 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                 const hasAnswered = state.answers[state.currentIndex] !== null;
                 const showFeedback = (state.mode === 'tutor' && hasAnswered) || state.isSubmitted;
                 
+                // تحديد متى يظهر الشرح الصوتي العام (دائماً في وضع التعلم، أو بعد تسليم الامتحان في وضع الاختبار)
+                const showOverallAudio = (state.mode === 'tutor') || state.isSubmitted;
+                let overallAudioBox = '';
+                
+                if (showOverallAudio && resource.url) {
+                    overallAudioBox = `
+                        <div class="mb-6 p-4 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.01] border-2 border-dashed border-emerald-500/20 rounded-2xl text-right animate-scale-up" dir="rtl">
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="fa-solid fa-circle-info text-emerald-500 animate-pulse text-sm"></i>
+                                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">الشرح الصوتي التوجيهي الشامل للاختبار ككل:</span>
+                            </div>
+                            ${window.getAudioPlayerHTML(resource.url, true)}
+                        </div>
+                    `;
+                }
+
                 let imgHTML = q.img ? `<img src="${q.img}" onclick="window.openImageLightbox('${q.img}', event)" class="max-w-md w-full rounded-xl shadow-md border border-slate-700/60 cursor-zoom-in hover:scale-[1.01] transition mb-6">` : '';
                 
                 const alphabet = ["A", "B", "C", "D", "E", "F"];
@@ -6551,6 +6577,9 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
                 bodyContainer.innerHTML = `
                     <div class="max-w-4xl mx-auto w-full">
+                        <!-- حقن مقطع الصوت التوجيهي الشامل هنا ليكون مثبتاً بالأعلى دائماً -->
+                        ${overallAudioBox}
+
                         <div class="mb-8">
                             <h3 id="adv-vignette-text" class="font-medium text-slate-800 dark:text-white leading-relaxed" style="font-size: ${state.fontSize}px;">${q.question}</h3>
                         </div>
