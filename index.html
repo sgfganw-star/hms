@@ -2874,7 +2874,7 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             const isMyLecture = (lecOwnerId === currentUser.uid) || (userData.role === 'superadmin') || (courseType !== 'collaborative');
 
             const block = document.createElement('div');
-            block.className = `lecture-block bg-white dark:bg-slate-900 border-2 ${isMyLecture ? 'border-slate-100 dark:border-slate-800 hover:border-brand-300' : 'border-slate-200/50 dark:border-slate-800/50 opacity-80'} rounded-2xl mb-5 shadow-sm overflow-hidden transition-all`;
+            block.className = `lecture-block bg-white dark:bg-slate-900 border-2 ${isMyLecture ? 'border-slate-100 dark:border-slate-800 hover:border-brand-300' : 'border-slate-200/50 dark:border-slate-800/50 opacity-80'} rounded-2xl mb-5 shadow-sm overflow-hidden transition-all duration-300`;
             
             // حفظ الداتا الأساسية في الـ dataset لاستخراجها عند الحفظ
             block.dataset.lecid = lecId;
@@ -2884,11 +2884,11 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             block.dataset.lecorder = lecData && lecData.order ? lecData.order : '99';
             
             if (isMyLecture) {
-                // شكل المحاضرة الطبيعي القابل للتعديل
+                // شكل المحاضرة الطبيعي القابل للتعديل مع ميزة الأكورديون (Accordion)
                 block.innerHTML = `
-                    <div class="bg-amber-500 p-4 flex flex-col md:flex-row gap-4 justify-between items-center cursor-move text-white rounded-t-2xl">
+                    <div class="bg-amber-500 p-4 flex flex-col md:flex-row gap-4 justify-between items-center text-white rounded-t-2xl select-none">
                         <div class="flex items-center gap-3 w-full">
-                            <div class="cursor-grab text-amber-100 hover:text-white transition"><i class="fa-solid fa-grip-vertical"></i></div>
+                            <div class="cursor-grab text-amber-100 hover:text-white transition shrink-0"><i class="fa-solid fa-grip-vertical"></i></div>
                             <div class="w-16 shrink-0">
                                 <input type="number" class="lec-order-input w-full p-2 text-center bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-lg outline-none text-sm font-bold focus:ring-2 focus:ring-amber-300" placeholder="الترتيب" value="${lecData && lecData.order ? lecData.order : ''}" min="1" required>
                             </div>
@@ -2896,9 +2896,19 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                                 <input type="text" class="lec-title-input w-full bg-transparent outline-none font-black text-white placeholder-amber-100 text-base" placeholder="اكتب عنوان المحاضرة هنا..." value="${lecTitle}" required onchange="this.closest('.lecture-block').dataset.lectitle = this.value;">
                             </div>
                         </div>
-                        <button type="button" onclick="if(confirm('هل أنت متأكد من حذف هذه المحاضرة؟')) this.closest('.lecture-block').remove();" class="text-white hover:text-rose-200 bg-amber-600/40 p-2.5 rounded-xl transition shrink-0"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                        
+                        <!-- صف أزرار التحكم: الطوي والحذف -->
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <!-- زر الطوي الأكورديوني المطور -->
+                            <button type="button" onclick="window.toggleBuilderLectureCollapse(this)" class="text-white hover:text-amber-100 bg-amber-600/40 p-2.5 rounded-xl transition duration-200" title="طوي/فرد المحاضرة">
+                                <i class="fa-solid fa-chevron-down text-xs transition-transform duration-250"></i>
+                            </button>
+                            <button type="button" onclick="if(confirm('هل أنت متأكد من حذف هذه المحاضرة؟')) this.closest('.lecture-block').remove();" class="text-white hover:text-rose-200 bg-amber-600/40 p-2.5 rounded-xl transition shrink-0" title="حذف المحاضرة"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                        </div>
                     </div>
-                    <div class="p-4 bg-white dark:bg-slate-900">
+                    
+                    <!-- الحاوية القابلة للانسدال والطوي -->
+                    <div class="lecture-body-container p-4 bg-white dark:bg-slate-900 transition-all duration-300">
                         <div class="flex justify-between items-center mb-3">
                             <p class="text-[10px] font-bold text-slate-400 uppercase"><i class="fa-solid fa-photo-film text-brand-500 mr-1"></i> مصادر المحاضرة</p>
                             ${courseType === 'collaborative' ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded text-[9px] font-bold"><i class="fa-solid fa-unlock"></i> هذا الجزء يخصك ومتاح للتعديل</span>` : ''}
@@ -2910,17 +2920,26 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     </div>
                 `;
             } else {
-                // شكل المحاضرة المقفل (للكورسات التشاركية)
+                // شكل المحاضرة المقفل (للكورسات التشاركية) مع دعم الطوي لحفظ مساحة الشاشة للدكتور الآخر
                 block.innerHTML = `
-                    <div class="bg-slate-300 dark:bg-slate-800 p-4 flex flex-col md:flex-row gap-4 justify-between items-center text-slate-500 dark:text-slate-400 rounded-t-2xl border-b border-slate-200 dark:border-slate-700">
+                    <div class="bg-slate-300 dark:bg-slate-800 p-4 flex flex-col md:flex-row gap-4 justify-between items-center text-slate-500 dark:text-slate-400 rounded-t-2xl border-b border-slate-200 dark:border-slate-700 select-none">
                         <div class="flex items-center gap-3 w-full">
                             <i class="fa-solid fa-lock text-slate-400"></i>
                             <div class="w-16 shrink-0"><span class="w-full inline-block p-2 text-center bg-slate-200 dark:bg-slate-900 rounded-lg text-sm font-bold opacity-50">${lecData && lecData.order ? lecData.order : '-'}</span></div>
                             <div class="w-full flex-1"><span class="font-black text-base opacity-70">${lecTitle}</span></div>
                         </div>
-                        <span class="bg-white/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg text-[10px] font-bold shrink-0 shadow-sm border border-slate-200/50"><i class="fa-solid fa-user-doctor text-brand-500"></i> يخص د. ${lecOwnerName}</span>
+                        
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <!-- زر الطوي الأكورديوني للمحاضرات المقفلة -->
+                            <button type="button" onclick="window.toggleBuilderLectureCollapse(this)" class="text-slate-500 dark:text-slate-400 hover:text-slate-700 bg-slate-200/50 dark:bg-slate-700/50 p-2.5 rounded-xl transition duration-200" title="طوي/فرد المحاضرة">
+                                <i class="fa-solid fa-chevron-down text-xs transition-transform duration-250"></i>
+                            </button>
+                            <span class="bg-white/50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg text-[10px] font-bold shrink-0 shadow-sm border border-slate-200/50"><i class="fa-solid fa-user-doctor text-brand-500"></i> يخص د. ${lecOwnerName}</span>
+                        </div>
                     </div>
-                    <div class="p-4 bg-slate-50/50 dark:bg-slate-900/50 pointer-events-none opacity-60 grayscale-[50%]">
+                    
+                    <!-- الحاوية المقفلة القابلة للانسدال والطوي -->
+                    <div class="lecture-body-container p-4 bg-slate-50/50 dark:bg-slate-900/50 pointer-events-none opacity-60 grayscale-[50%] transition-all duration-300">
                         <p class="text-[10px] font-bold text-slate-400 mb-3"><i class="fa-solid fa-photo-film mr-1"></i> مصادر (مقفلة للتعديل)</p>
                         <div class="resources-container space-y-2"></div>
                     </div>
@@ -2946,6 +2965,22 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                 });
             } else if (isMyLecture) {
                 window.addResourceBlock(block.querySelector('.resources-container'));
+            }
+        };
+        // [محرك الأكورديون المطور لمنشئ الكورسات]: طوي وفرد محتويات المحاضرة لحفظ مساحة الشاشة للدكتور
+        window.toggleBuilderLectureCollapse = function(btnElem) {
+            const block = btnElem.closest('.lecture-block');
+            const bodyContainer = block.querySelector('.lecture-body-container');
+            const icon = btnElem.querySelector('i');
+            
+            if (bodyContainer) {
+                // تبديل ظهور الحاوية (إخفاء / إظهار)
+                bodyContainer.classList.toggle('hidden');
+                
+                if (icon) {
+                    // تدوير السهم بشكل تفاعلي ناعم بـ 180 درجة عند الإغلاق
+                    icon.classList.toggle('rotate-180');
+                }
             }
         };
 
@@ -6550,7 +6585,15 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     // التخصيص البصري الفاخر للمراجعة مع ميزة (الأكورديون)
                     if (showFeedback) {
                         const isCorrect = idx === q.correctIndex;
-                        const cardBorder = isCorrect ? 'border-emerald-500 bg-emerald-500/[0.02]' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900';
+                        
+                        // تمييز الخيارات: أخضر للإجابة الصحيحة، وأحمر صريح فقط للخيار الخاطئ الذي قام الطالب باختياره
+                        let cardBorder = 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900';
+                        if (isCorrect) {
+                            cardBorder = 'border-emerald-500 bg-emerald-500/[0.02]';
+                        } else if (isSelected) {
+                            cardBorder = 'border-rose-500 bg-rose-500/[0.02]';
+                        }
+                        
                         const badgeColor = isCorrect ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500';
                         
                         return `
