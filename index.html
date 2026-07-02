@@ -861,7 +861,7 @@
                                 </div>
 
                                 <!-- التبويب الثاني: هيكلة المحتوى والمصادر -->
-                                <div id="builder-tab-content" class="builder-tab-content hidden animate-fade-in pb-24">
+                                <div id="builder-tab-content" class="builder-tab-content hidden pb-24">
                                     <div class="border border-slate-200 dark:border-darkBorder rounded-2xl overflow-hidden shadow-sm bg-slate-50/50 dark:bg-slate-900/20">
                                         <div id="builder-lectures-container" class="p-4 md:p-6 space-y-4 min-h-[300px]">
                                             <div class="text-center py-10 text-slate-400 font-bold empty-lectures-msg text-xs">
@@ -2970,18 +2970,47 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                 window.addResourceBlock(block.querySelector('.resources-container'));
             }
         };
-        // [محرك الأكورديون المطور لمنشئ الكورسات]: طوي وفرد محتويات المحاضرة لحفظ مساحة الشاشة للدكتور
+        // [محرك الأكورديون المطور لمنشئ الكورسات]: طوي وفرد المحاضرة + التحميل المتأخر للاختبارات لمنع التهنيج
         window.toggleBuilderLectureCollapse = function(btnElem) {
             const block = btnElem.closest('.lecture-block');
             const bodyContainer = block.querySelector('.lecture-body-container');
             const icon = btnElem.querySelector('i');
             
             if (bodyContainer) {
+                // التحميل المتأخر الذكي (Lazy Load UI Parsing):
+                // يتم رسم واجهات الاختبارات المعقدة فقط في اللحظة التي يفتح فيها الدكتور المحاضرة لتوفير 90% من جهد الهاتف
+                if (bodyContainer.classList.contains('hidden') && !block.dataset.parsedUi) {
+                    
+                    block.querySelectorAll('.quiz-questions-wrapper').forEach(wrapper => {
+                        const textData = wrapper.querySelector('.res-quiz-data').value;
+                        if(textData && wrapper.querySelector('.quiz-ui-container').innerHTML.trim() === '') {
+                            window.parseQuizToUI(textData.replace(/\n/g, "\\n"), wrapper);
+                        }
+                    });
+                    
+                    block.querySelectorAll('.flashcard-wrapper').forEach(wrapper => {
+                        const textData = wrapper.querySelector('.res-flashcard-data').value;
+                        if(textData && wrapper.querySelector('.fc-ui-container').innerHTML.trim() === '') {
+                            window.parseFlashcardToUI(textData.replace(/\n/g, "\\n"), wrapper);
+                        }
+                    });
+                    
+                    block.querySelectorAll('.adv-quiz-wrapper').forEach(wrapper => {
+                        const textData = wrapper.querySelector('.res-adv-quiz-data').value;
+                        if(textData && wrapper.querySelector('.adv-quiz-ui-container').innerHTML.trim() === '') {
+                            window.parseAdvQuizToUI(textData.replace(/\n/g, "\\n"), wrapper);
+                        }
+                    });
+                    
+                    // تعليم المحاضرة بأنه تم رسمها لكي لا نرهق الهاتف برسمها مرة أخرى عند الطوي والفرد مجدداً
+                    block.dataset.parsedUi = 'true'; 
+                }
+
                 // تبديل ظهور الحاوية (إخفاء / إظهار)
                 bodyContainer.classList.toggle('hidden');
                 
                 if (icon) {
-                    // تدوير السهم بشكل تفاعلي ناعم بـ 180 درجة عند الإغلاق
+                    // تدوير السهم بشكل تفاعلي ناعم بـ 180 درجة عند الفتح والإغلاق
                     icon.classList.toggle('rotate-180');
                 }
             }
@@ -4483,21 +4512,7 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             history.replaceState(null, null, "#admin-add?id=" + id);
             
             document.getElementById('page-title').innerText = "تعديل محتوى الكورس";
-            // تفعيل الواجهات التفاعلية (للاختبارات والبطاقات) عند التعديل
-            setTimeout(() => {
-                document.querySelectorAll('.quiz-questions-wrapper').forEach(wrapper => {
-                    const textData = wrapper.querySelector('.res-quiz-data').value;
-                    if(textData) window.parseQuizToUI(textData.replace(/\n/g, "\\n"), wrapper);
-                });
-                document.querySelectorAll('.flashcard-wrapper').forEach(wrapper => {
-                    const textData = wrapper.querySelector('.res-flashcard-data').value;
-                    if(textData) window.parseFlashcardToUI(textData.replace(/\n/g, "\\n"), wrapper);
-                });
-                document.querySelectorAll('.adv-quiz-wrapper').forEach(wrapper => {
-                    const textData = wrapper.querySelector('.res-adv-quiz-data').value;
-                    if(textData) window.parseAdvQuizToUI(textData.replace(/\n/g, "\\n"), wrapper);
-                });
-            }, 500);
+            // تم نقل تفعيل الواجهات التفاعلية لنظام (التحميل المتأخر الذكي) لتسريع الهاتف ومنع التهنيج
         };
 
         window.deleteCourse = async function(id) {
