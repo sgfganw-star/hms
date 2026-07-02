@@ -2844,6 +2844,14 @@ const actionBtnHtml = (isPaid && !isUnlocked)
         window.resetCourseForm = function() {
             document.getElementById('form-course-builder').reset();
             document.getElementById('course-edit-id').value = "";
+            
+            // تصفير حماية حقل نوع الكورس عند إنشاء كورس جديد ليكون متاحاً دائماً
+            const typeSelect = document.getElementById('c-course-type');
+            if (typeSelect) {
+                typeSelect.disabled = false;
+                typeSelect.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+                typeSelect.title = "";
+            }
             document.getElementById('builder-lectures-container').innerHTML = `<div class="text-center py-10 text-slate-400 font-bold empty-lectures-msg text-xs">لم يتم إضافة أي محاضرات بعد لهذا الكورس. اضغط على "إضافة محاضرة جديدة" بالطلب للبدء.</div>`;
             window.switchBuilderTab('basic'); // للعودة للتبويب الأول دائماً
             updateLivePreview();
@@ -3220,7 +3228,7 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                 <div class="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-2">
                     <label class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-2 block flex items-center gap-1.5"><i class="fa-solid fa-microphone"></i> مقطع صوتي لشرح السؤال (اختياري)</label>
                     <div class="flex flex-col gap-2">
-                        <input type="text" oninput="this.nextElementSibling.src = this.value; this.nextElementSibling.classList.toggle('hidden', !this.value);" class="adv-audio-input w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط التسجيل الصوتي المباشر هنا (ينتهي بـ mp3)..." value="${qData && qData.audio ? qData.audio : ''}">
+                        <input type="text" oninput="window.autoConvertVocarooLink(this); this.nextElementSibling.src = this.value; this.nextElementSibling.classList.toggle('hidden', !this.value);" class="adv-audio-input w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط Vocaroo هنا (مثال: https://voca.ro/1a2b3c) وسنقوم بتحويله لمباشر تلقائياً..." value="${qData && qData.audio ? qData.audio : ''}">
                         <audio controls class="w-full h-8 ${qData && qData.audio ? '' : 'hidden'}" src="${qData && qData.audio ? qData.audio : ''}"></audio>
                         <a href="https://vocaroo.com/" target="_blank" class="inline-flex items-center gap-1 text-[9px] font-black text-emerald-600 hover:underline w-max">
                             <i class="fa-solid fa-record-vinyl text-rose-500 animate-pulse"></i> اضغط هنا لتسجيل صوتك واستخراج الرابط المباشر
@@ -3821,6 +3829,38 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             }
         };
 
+        // دالة التحويل الذكي التلقائي لروابط Vocaroo إلى مشغل مباشر
+        window.autoConvertVocarooLink = function(inputElem) {
+            let url = inputElem.value.trim();
+            
+            // التحقق مما إذا كان الرابط هو رابط فوكارو القصير أو العادي (ولا يحتوي على media مسبقاً)
+            if (url.includes("voca.ro/") || (url.includes("vocaroo.com/") && !url.includes("media"))) {
+                try {
+                    // استخراج كود الصوت (الذي يأتي بعد السلاش الأخيرة)
+                    const parts = url.split('/');
+                    const audioId = parts[parts.length - 1];
+                    
+                    if (audioId) {
+                        // تكوين الرابط المباشر للمشغل بصيغة mp3
+                        const directAudioLink = `https://media1.vocaroo.com/mp3/${audioId}`;
+                        
+                        // استبدال القيمة في الحقل فوراً
+                        inputElem.value = directAudioLink;
+                        
+                        // تأثير وميض أخضر لتأكيد التحويل للدكتور
+                        inputElem.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+                        setTimeout(() => {
+                            inputElem.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+                        }, 1500);
+
+                        showToast("تم تحويل رابط Vocaroo إلى مقطع صوتي مباشر بنجاح!", "success");
+                    }
+                } catch(e) {
+                    console.error("خطأ في تحويل رابط فوكارو:", e);
+                }
+            }
+        };
+
         // ==========================================
         // لوحة تحكم المالك المطورة وإدارة المستخدمين الفورية
         // ==========================================
@@ -4154,7 +4194,27 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             
             document.getElementById('course-edit-id').value = course.id;
             document.getElementById('c-title').value = course.title;
-            document.getElementById('c-course-type').value = course.courseType || 'standard'; // استدعاء نوع الكورس عند التعديل
+            
+            // --- حماية أمنية: من الذي يمكنه تغيير نوع الكورس (تشاركي أم عادي)؟ ---
+            const typeSelect = document.getElementById('c-course-type');
+            typeSelect.value = course.courseType || 'standard';
+            
+            // المالك (superadmin) أو منشئ الكورس الأساسي فقط هم من يستطيعون تغيير النوع
+            const canChangeType = (userData?.role === 'superadmin') || (course.createdBy === currentUser?.uid);
+            
+            if (!canChangeType) {
+                // تجميد الحقل للدكاترة المساعدين
+                typeSelect.disabled = true;
+                typeSelect.classList.add('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+                typeSelect.title = "لا تملك صلاحية لتغيير نظام الإدارة. هذه الصلاحية للمالك أو المنشئ الأساسي فقط.";
+            } else {
+                // فتح الحقل للمالك أو المنشئ
+                typeSelect.disabled = false;
+                typeSelect.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-slate-200');
+                typeSelect.title = "";
+            }
+            // -------------------------------------------------------------
+
             document.getElementById('c-difficulty').value = course.difficulty || 'مبتدئ';
             document.getElementById('c-duration').value = course.duration || '0';
             document.getElementById('c-cover').value = course.cover || '';
