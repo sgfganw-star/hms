@@ -6422,6 +6422,9 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                                 </div>
                             </div>
                             
+                            <!-- [تعديل الحاوية المستقلة]: لتثبيت مقطع الشرح العام للأبد دون أن يتأثر بتقليب الأسئلة -->
+                            <div id="adv-quiz-overall-audio-container" class="px-6 md:px-10 pt-4 bg-slate-50 dark:bg-slate-950/50 shrink-0 hidden"></div>
+
                             <div class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-slate-50 dark:bg-slate-950/50" id="adv-question-body">
                                 <!-- Question Details -->
                             </div>
@@ -6429,6 +6432,27 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     </div>
                 `;
                 contentContainer.innerHTML = mainHTML;
+
+                // ريندر وبناء الصوت الشامل لمرة واحدة فقط بداخل الحاوية الثابتة والآمنة
+                const overallAudioContainer = document.getElementById('adv-quiz-overall-audio-container');
+                const showOverallAudio = (state.mode === 'tutor') || state.isSubmitted;
+                
+                if (showOverallAudio && resource.url && overallAudioContainer) {
+                    overallAudioContainer.innerHTML = `
+                        <div class="max-w-4xl mx-auto w-full p-4 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] border-2 border-dashed border-emerald-500/20 rounded-2xl text-right shadow-sm" dir="rtl">
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="fa-solid fa-circle-info text-emerald-500 animate-pulse text-sm"></i>
+                                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">الشرح الصوتي التوجيهي الشامل للاختبار ككل:</span>
+                            </div>
+                            ${window.getAudioPlayerHTML(resource.url, true)}
+                        </div>
+                    `;
+                    overallAudioContainer.classList.remove('hidden');
+                } else if (overallAudioContainer) {
+                    overallAudioContainer.classList.add('hidden');
+                    overallAudioContainer.innerHTML = '';
+                }
+
                 renderCurrentQuestion();
                 if(state.useTimer && !state.timerInterval && !state.isSubmitted) resumeTimer();
             }
@@ -6468,22 +6492,6 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                 const bodyContainer = document.getElementById('adv-question-body');
                 const hasAnswered = state.answers[state.currentIndex] !== null;
                 const showFeedback = (state.mode === 'tutor' && hasAnswered) || state.isSubmitted;
-                
-                // تحديد متى يظهر الشرح الصوتي العام (دائماً في وضع التعلم، أو بعد تسليم الامتحان في وضع الاختبار)
-                const showOverallAudio = (state.mode === 'tutor') || state.isSubmitted;
-                let overallAudioBox = '';
-                
-                if (showOverallAudio && resource.url) {
-                    overallAudioBox = `
-                        <div class="mb-6 p-4 bg-emerald-500/[0.04] dark:bg-emerald-500/[0.01] border-2 border-dashed border-emerald-500/20 rounded-2xl text-right animate-scale-up" dir="rtl">
-                            <div class="flex items-center gap-2 mb-3">
-                                <i class="fa-solid fa-circle-info text-emerald-500 animate-pulse text-sm"></i>
-                                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">الشرح الصوتي التوجيهي الشامل للاختبار ككل:</span>
-                            </div>
-                            ${window.getAudioPlayerHTML(resource.url, true)}
-                        </div>
-                    `;
-                }
 
                 let imgHTML = q.img ? `<img src="${q.img}" onclick="window.openImageLightbox('${q.img}', event)" class="max-w-md w-full rounded-xl shadow-md border border-slate-700/60 cursor-zoom-in hover:scale-[1.01] transition mb-6">` : '';
                 
@@ -6607,9 +6615,6 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
                 bodyContainer.innerHTML = `
                     <div class="max-w-4xl mx-auto w-full">
-                        <!-- حقن مقطع الصوت التوجيهي الشامل هنا ليكون مثبتاً بالأعلى دائماً -->
-                        ${overallAudioBox}
-
                         <div class="mb-8">
                             <h3 id="adv-vignette-text" class="font-medium text-slate-800 dark:text-white leading-relaxed" style="font-size: ${state.fontSize}px;">${q.question}</h3>
                         </div>
