@@ -3224,22 +3224,22 @@ const actionBtnHtml = (isPaid && !isUnlocked)
                     </div>
                 </div>
 
-                <!-- ميزة الشرح الصوتي المدمجة مع زر التسجيل الجانبي -->
+                <!-- ميزة الشرح الصوتي المدمجة مع Google Drive والمحول السحري -->
                 <div class="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mt-2 audio-container-wrapper">
-                    <label class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-2 block flex items-center gap-1.5"><i class="fa-solid fa-volume-high animate-pulse"></i> مقطع صوتي لشرح السؤال (سجل وارفع مباشرة)</label>
+                    <label class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-2 block flex items-center gap-1.5"><i class="fa-solid fa-volume-high animate-pulse"></i> مقطع صوتي لشرح السؤال عبر Google Drive</label>
                     <div class="flex flex-col gap-2">
-                        <!-- صف الإدخال وأزرار التحكم الجانبية السريعة -->
+                        <!-- صف الإدخال وأزرار غوغل درايف الجانبية -->
                         <div class="flex gap-1.5 w-full items-center">
-                            <input type="text" oninput="window.autoConvertCatboxLink(this); const player = this.closest('.audio-container-wrapper').querySelector('audio'); player.src = this.value; player.classList.toggle('hidden', !this.value);" class="adv-audio-input flex-1 p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط ملف الصوت المباشر من Catbox هنا..." value="${qData && qData.audio ? qData.audio : ''}">
+                            <input type="text" oninput="window.autoConvertDriveAudioLink(this); const player = this.closest('.audio-container-wrapper').querySelector('audio'); player.src = this.value; player.classList.toggle('hidden', !this.value);" class="adv-audio-input flex-1 p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-[10px] font-bold text-slate-700 dark:text-slate-300" placeholder="الصق رابط مشاركة الملف من Google Drive هنا وسنقوم بتحويله لمباشر..." value="${qData && qData.audio ? qData.audio : ''}">
                             
-                            <!-- زر التسجيل الجانبي الفوري -->
-                            <a href="https://online-voice-recorder.com" target="_blank" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2.5 rounded-lg text-[9px] font-black transition shrink-0 flex items-center gap-1 shadow-sm" title="اضغط لتسجيل شرحك الصوتي فوراً وحفظه">
+                            <!-- زر التسجيل الجانبي المطور -->
+                            <a href="https://online-voice-recorder.com/ar/" target="_blank" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2.5 rounded-lg text-[9px] font-black transition shrink-0 flex items-center gap-1 shadow-sm" title="سجل صوتك أولاً، ثم قم بتحميل الملف الصوتي mp3 لجهازك">
                                 <i class="fa-solid fa-microphone"></i> سجل صوتك
                             </a>
 
-                            <!-- زر الرفع الجانبي للـ Catbox -->
-                            <a href="https://catbox.moe/" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-lg text-[9px] font-black transition shrink-0 flex items-center gap-1 shadow-sm" title="اضغط لرفع الملف الصوتي واستخراج رابط مباشر">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> ارفع الصوت
+                            <!-- زر التوجيه السريع لـ Google Drive -->
+                            <a href="https://drive.google.com/" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2.5 rounded-lg text-[9px] font-black transition shrink-0 flex items-center gap-1 shadow-sm" title="ارفع الملف الصوتي على درايف، واجعل صلاحية المشاركة (أي شخص لديه الرابط) ثم انسخه هنا">
+                                <i class="fa-brands fa-google-drive"></i> افتح درايف
                             </a>
                         </div>
                         <audio controls class="w-full h-8 ${qData && qData.audio ? '' : 'hidden'}" src="${qData && qData.audio ? qData.audio : ''}"></audio>
@@ -3839,30 +3839,43 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             }
         };
 
-        // دالة التحقق والتأمين التلقائي لروابط ملفات الصوت المرفوعة عبر Catbox
-        window.autoConvertCatboxLink = function(inputElem) {
+        // دالة التحويل الذكي التلقائي لروابط صوتيات Google Drive إلى مشغل بث وتشغيل فوري دون تحميل
+        window.autoConvertDriveAudioLink = function(inputElem) {
             let url = inputElem.value.trim();
             if (!url) return;
 
-            // إذا كتب الدكتور رابط الرفع فقط بدون اسم ملف، ننبهه بلطف
-            if (url === "https://catbox.moe" || url === "https://catbox.moe/") {
-                showToast("تنبيه: يجب رفع الملف أولاً على الموقع ونسخ رابط الملف النهائي المباشر (الذي يبدأ بـ files.catbox.moe).", "error");
-                return;
-            }
+            // التأكد من أن الرابط يخص جوجل درايف وأنه ليس رابط بث مباشر بعد
+            if (url.includes("drive.google.com") && !url.includes("docs.google.com/uc")) {
+                try {
+                    let fileId = null;
 
-            // تعديل تلقائي ذكي: لو الدكتور نسخ الرابط وبدأ بـ files.catbox.moe مباشرة بدون بروتوكول
-            if (url.startsWith("files.catbox.moe")) {
-                url = "https://" + url;
-                inputElem.value = url;
-            }
+                    // استخراج معرف الملف الفرعي (File ID) باستخدام تعبيرات ريجكس
+                    const matchA = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                    if (matchA && matchA[1]) {
+                        fileId = matchA[1];
+                    } else {
+                        const matchB = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                        if (matchB && matchB[1]) {
+                            fileId = matchB[1];
+                        }
+                    }
 
-            // تحقق من احتواء الرابط على النطاق الصحيح للملفات المباشرة لـ Catbox
-            if (url.includes("files.catbox.moe")) {
-                // تأثير بصري خفيف (وميض أخضر) لتأكيد قبول الملف الصوتي المباشر بنجاح
-                inputElem.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
-                setTimeout(() => {
-                    inputElem.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
-                }, 1500);
+                    // إذا عثرنا على المعرّف، نحوله فوراً لرابط البث المباشر (Streaming Link) ليعمل داخل المشغل مباشرة دون تنزيل
+                    if (fileId) {
+                        const directPlayableLink = `https://docs.google.com/uc?id=${fileId}`;
+                        inputElem.value = directPlayableLink;
+                        
+                        // وميض أخضر للدلالة على نجاح التحويل البرمجي
+                        inputElem.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+                        setTimeout(() => {
+                            inputElem.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+                        }, 1500);
+
+                        showToast("تم تحويل الرابط إلى مشغل صوتي للبث المباشر بنجاح!", "success");
+                    }
+                } catch (e) {
+                    console.error("خطأ تحويل ملف صوت درايف:", e);
+                }
             }
         };
 
