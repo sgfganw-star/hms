@@ -6031,7 +6031,10 @@ const actionBtnHtml = (isPaid && !isUnlocked)
         window.renderAdvancedQuiz = function(resource) {
             window.openImmersiveStudyRoom(`اختبار متقدم: ${resource.title}`);
             const contentContainer = document.getElementById('study-room-dynamic-content');
-            
+        
+             // متغير لمنع مسح وإعادة بناء مشغل الصوت العام عند تقليب الأسئلة
+            let isSkeletonRendered = false;
+
             if (!resource.advQuizData) {
                 contentContainer.innerHTML = `<p class="text-white p-5 text-center text-xs">لا توجد أسئلة مرفوعة لهذا الاختبار بعد.</p>`;
                 return;
@@ -6360,6 +6363,7 @@ const actionBtnHtml = (isPaid && !isUnlocked)
             }
 
             function renderQuizInterface() {
+                // 1. توليد كود الأزرار الجانبية المحدث لحظياً
                 let sidebarGrid = advQuestions.map((q, i) => {
                     let btnClass = "bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-300 border-slate-200 dark:border-slate-700";
                     if (state.answers[i] !== null) btnClass = "bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white border-slate-350 dark:border-slate-600";
@@ -6382,75 +6386,106 @@ const actionBtnHtml = (isPaid && !isUnlocked)
 
                 const isFlagged = state.flaggedQuestions[state.currentIndex];
 
-                let mainHTML = `
-                    <div class="w-full h-full flex flex-col md:flex-row bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200 absolute inset-0 text-left" dir="ltr">
-                        
-                        <!-- Sidebar (Navigator) -->
-                        <div id="adv-quiz-sidebar" class="w-full md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 max-md:hidden">
-                            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-850">
-                                <span class="font-black text-xs uppercase tracking-widest flex items-center gap-1.5"><i class="fa-solid fa-compass"></i> Exam Progress</span>
-                                ${state.useTimer ? `<span id="adv-timer-display" class="font-mono font-black text-sm bg-slate-200 dark:bg-slate-950 px-2.5 py-1 rounded shadow-inner">--:--</span>` : ''}
-                            </div>
-                            <div class="p-4 flex-1 overflow-y-auto custom-scrollbar">
-                                <div class="grid grid-cols-5 gap-2">
-                                    ${sidebarGrid}
-                                </div>
-                            </div>
-                            <div class="p-4 border-t border-slate-200 dark:border-slate-800">
-                                <button onclick="window.finishAdvancedQuizConf()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl shadow-md transition text-xs">Submit Exam</button>
-                            </div>
-                        </div>
-
-                        <!-- Main Content Area -->
-                        <div class="flex-1 flex flex-col h-full overflow-hidden relative">
-                            <div class="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
-                                <div class="flex items-center gap-3">
-                                    <button onclick="document.getElementById('adv-quiz-sidebar').classList.toggle('max-md:hidden')" class="md:hidden text-slate-500 hover:text-slate-800 text-lg"><i class="fa-solid fa-bars"></i></button>
-                                    <span class="font-black text-xs md:text-sm text-slate-500">Question ${state.currentIndex + 1} of ${advQuestions.length}</span>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    
-                                    <!-- شريط التحكم بحجم الخط المطور -->
-                                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1 border border-slate-200 dark:border-slate-700">
-                                        <button onclick="window.changeAdvFontSize(1)" class="w-7 h-7 text-xs font-bold hover:bg-white dark:hover:bg-slate-700 rounded transition" title="Increase font size">A+</button>
-                                        <button onclick="window.changeAdvFontSize(-1)" class="w-7 h-7 text-xs font-bold hover:bg-white dark:hover:bg-slate-700 rounded transition" title="Decrease font size">A-</button>
-                                    </div>
-
-                                    <button onclick="window.toggleAdvFlag(${state.currentIndex})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition ${isFlagged ? 'bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-850'}" title="Mark this question for later review">
-                                        <i class="fa-solid fa-flag ${isFlagged ? 'animate-bounce' : ''}"></i> <span>${isFlagged ? 'Flagged' : 'Flag'}</span>
-                                    </button>
-                                </div>
-                            </div>
+                // 2. إذا كانت هذه هي المرة الأولى، نقوم ببناء الهيكل الأساسي والمشغل الصوتي الشامل وتثبيته
+                if (!isSkeletonRendered) {
+                    let mainHTML = `
+                        <div class="w-full h-full flex flex-col md:flex-row bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200 absolute inset-0 text-left" dir="ltr">
                             
-                            <!-- [تعديل الحاوية المستقلة]: لتثبيت مقطع الشرح العام للأبد دون أن يتأثر بتقليب الأسئلة -->
-                            <div id="adv-quiz-overall-audio-container" class="px-6 md:px-10 pt-4 bg-slate-50 dark:bg-slate-950/50 shrink-0 hidden"></div>
-
-                            <div class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-slate-50 dark:bg-slate-950/50" id="adv-question-body">
-                                <!-- Question Details -->
+                            <!-- Sidebar (Navigator) -->
+                            <div id="adv-quiz-sidebar" class="w-full md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 max-md:hidden">
+                                <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-850">
+                                    <span class="font-black text-xs uppercase tracking-widest flex items-center gap-1.5"><i class="fa-solid fa-compass"></i> Exam Progress</span>
+                                    ${state.useTimer ? `<span id="adv-timer-display" class="font-mono font-black text-sm bg-slate-200 dark:bg-slate-950 px-2.5 py-1 rounded shadow-inner">--:--</span>` : ''}
+                                </div>
+                                <div class="p-4 flex-1 overflow-y-auto custom-scrollbar">
+                                    <div class="grid grid-cols-5 gap-2">
+                                        ${sidebarGrid}
+                                    </div>
+                                </div>
+                                <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+                                    <button onclick="window.finishAdvancedQuizConf()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl shadow-md transition text-xs">Submit Exam</button>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                `;
-                contentContainer.innerHTML = mainHTML;
 
-                // ريندر وبناء الصوت الشامل لمرة واحدة فقط بداخل الحاوية الثابتة والآمنة
-                const overallAudioContainer = document.getElementById('adv-quiz-overall-audio-container');
-                const showOverallAudio = (state.mode === 'tutor') || state.isSubmitted;
-                
-                if (showOverallAudio && resource.url && overallAudioContainer) {
-                    overallAudioContainer.innerHTML = `
-                        <div class="max-w-4xl mx-auto w-full p-4 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] border-2 border-dashed border-emerald-500/20 rounded-2xl text-right shadow-sm" dir="rtl">
-                            <div class="flex items-center gap-2 mb-3">
-                                <i class="fa-solid fa-circle-info text-emerald-500 animate-pulse text-sm"></i>
-                                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">الشرح الصوتي التوجيهي الشامل للاختبار ككل:</span>
+                            <!-- Main Content Area -->
+                            <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+                                <div class="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
+                                    <div class="flex items-center gap-3">
+                                        <button onclick="document.getElementById('adv-quiz-sidebar').classList.toggle('max-md:hidden')" class="md:hidden text-slate-500 hover:text-slate-800 text-lg"><i class="fa-solid fa-bars"></i></button>
+                                        <span class="font-black text-xs md:text-sm text-slate-500">Question ${state.currentIndex + 1} of ${advQuestions.length}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        
+                                        <!-- شريط التحكم بحجم الخط المطور -->
+                                        <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg gap-1 border border-slate-200 dark:border-slate-700">
+                                            <button onclick="window.changeAdvFontSize(1)" class="w-7 h-7 text-xs font-bold hover:bg-white dark:hover:bg-slate-700 rounded transition" title="Increase font size">A+</button>
+                                            <button onclick="window.changeAdvFontSize(-1)" class="w-7 h-7 text-xs font-bold hover:bg-white dark:hover:bg-slate-700 rounded transition" title="Decrease font size">A-</button>
+                                        </div>
+
+                                        <button onclick="window.toggleAdvFlag(${state.currentIndex})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition ${isFlagged ? 'bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-850'}" title="Mark this question for later review">
+                                            <i class="fa-solid fa-flag ${isFlagged ? 'animate-bounce' : ''}"></i> <span>${isFlagged ? 'Flagged' : 'Flag'}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- [تعديل الحاوية المستقلة الثابتة]: لتثبيت مقطع الشرح العام للأبد دون أن يتأثر بقلب الأسئلة -->
+                                <div id="adv-quiz-overall-audio-container" class="px-6 md:px-10 pt-4 bg-slate-50 dark:bg-slate-950/50 shrink-0 hidden"></div>
+
+                                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 bg-slate-50 dark:bg-slate-950/50" id="adv-question-body">
+                                    <!-- Question Details -->
+                                </div>
                             </div>
-                            ${window.getAudioPlayerHTML(resource.url, true)}
                         </div>
                     `;
-                    overallAudioContainer.classList.remove('hidden');
-                } else if (overallAudioContainer) {
-                    overallAudioContainer.classList.add('hidden');
-                    overallAudioContainer.innerHTML = '';
+                    contentContainer.innerHTML = mainHTML;
+                    isSkeletonRendered = true; // تثبيت الهيكل
+
+                    // بناء كارت الصوت العام لمرة واحدة فقط لمنع مسحه وإعادة تشغيله
+                    const overallAudioContainer = document.getElementById('adv-quiz-overall-audio-container');
+                    const showOverallAudio = (state.mode === 'tutor') || state.isSubmitted;
+                    
+                    if (showOverallAudio && resource.url && overallAudioContainer) {
+                        overallAudioContainer.innerHTML = `
+                            <div class="max-w-4xl mx-auto w-full p-4 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] border-2 border-dashed border-emerald-500/20 rounded-2xl text-right shadow-sm" dir="rtl">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-circle-info text-emerald-500 animate-pulse text-sm"></i>
+                                    <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">الشرح الصوتي التوجيهي الشامل للاختبار ككل:</span>
+                                </div>
+                                ${window.getAudioPlayerHTML(resource.url, true)}
+                            </div>
+                        `;
+                        overallAudioContainer.classList.remove('hidden');
+                    } else if (overallAudioContainer) {
+                        overallAudioContainer.classList.add('hidden');
+                        overallAudioContainer.innerHTML = '';
+                    }
+                } else {
+                    // 3. إذا كان الهيكل مبنياً بالفعل، نقوم فقط بتحديث الأجزاء المتغيرة (ألوان أرقام الأسئلة الجانبية + الهيدر) دون مسح الصوت!
+                    const sidebarGridContainer = document.querySelector('#adv-quiz-sidebar .grid');
+                    if (sidebarGridContainer) {
+                        sidebarGridContainer.innerHTML = sidebarGrid;
+                    }
+                    
+                    // تحديث رقم السؤال الفعلي في الهيدر
+                    const headerCounter = document.querySelector('.h-14 .text-slate-500');
+                    if (headerCounter) {
+                        headerCounter.textContent = `Question ${state.currentIndex + 1} of ${advQuestions.length}`;
+                    }
+
+                    // تحديث حالة زر الملاحة العلمية للـ Flag بالهيدر
+                    const flagBtn = document.querySelector('.h-14 button[onclick^="window.toggleAdvFlag"]');
+                    if (flagBtn) {
+                        flagBtn.onclick = () => window.toggleAdvFlag(state.currentIndex); 
+                        if (isFlagged) {
+                            flagBtn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400";
+                            flagBtn.querySelector('i').className = "fa-solid fa-flag animate-bounce";
+                            flagBtn.querySelector('span').textContent = "Flagged";
+                        } else {
+                            flagBtn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-850";
+                            flagBtn.querySelector('i').className = "fa-solid fa-flag";
+                            flagBtn.querySelector('span').textContent = "Flag";
+                        }
+                    }
                 }
 
                 renderCurrentQuestion();
